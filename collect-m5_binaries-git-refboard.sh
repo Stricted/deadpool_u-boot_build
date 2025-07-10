@@ -16,13 +16,18 @@ bl2.bin, bl30, bl31, aml_encrypt, ddr_parse, fip_create, ddr firmware
 Description
 
 function usage() {
-    echo "Usage: $0 [u-boot branch] [soc] [refboard]"
+    echo "Usage: $0 [u-boot branch] [soc] [refboard] [power-up key]"
 }
 
 if [[ $# -lt 3 ]]
 then
     usage
     exit 22
+elif [[ $# -eq 3 ]]
+then
+    PWRKEYCODE=
+else
+    PWRKEYCODE=${4}
 fi
 
 GITBRANCH=${1}
@@ -108,6 +113,15 @@ then
     sed -i "s/40960/47104/" $TMP_GIT/fip/$SOCFAMILY/build.sh
 fi
 
+# custom power-up key
+if ! [[ -z "$PWRKEYCODE" ]]
+then
+    board_cfg="$TMP_GIT/bl33/board/amlogic/configs/${REFBOARD}.h"
+    head_tmp="$(mktemp $TMP_GIT/tmp.XXXX)"
+    awk -v pwr_key=${4} '{if ($2=="CONFIG_IR_REMOTE_POWER_UP_KEY_VAL6") $3=pwr_key; print $0}' $board_cfg > $head_tmp
+    cp $head_tmp $board_cfg
+fi
+
 sed -i "190d" $TMP_GIT/fip/lib.sh
 sed -i "s/ \x24\x7BBL33_DEFCFG2\x7D\x2F\*//" $TMP_GIT/fip/build_bl33.sh
 (
@@ -149,6 +163,11 @@ then
     sed -i "s/ :/:/" $TMP_GIT/fw_built.bin | echo "DDR-FIRMWARE: $(< "$TMP_GIT/fw_version.bin")" >> $TMP/info.txt
     echo "$(< "$TMP_GIT/fw_built.bin")" >> $TMP/info.txt
     SOCFAMILY="sm1"
+fi
+
+if [[ $# -eq 4 ]]
+then
+    echo "KEY-POWER: $4" >> $TMP/info.txt
 fi
 
 echo "SOC: $SOCFAMILY" >> $TMP/info.txt
