@@ -32,9 +32,9 @@ TMP_GIT=$(pwd)/out
 git clone --depth=2 https://github.com/Stricted/deadpool_u-boot.git -b $GITBRANCH $TMP_GIT/u-boot
 
 mkdir $TMP_GIT/gcc-linaro-aarch64-none-elf
-wget -qO- https://releases.linaro.org/archive/13.11/components/toolchain/binaries/gcc-linaro-aarch64-none-elf-4.8-2013.11_linux.tar.xz | tar -xJ --strip-components=1 -C $TMP_GIT/gcc-linaro-aarch64-none-elf
+wget -qO- https://mirror.twds.com.tw/armbian-dl/_toolchain/gcc-linaro-aarch64-none-elf-4.8-2013.11_linux.tar.xz | tar -xJ --strip-components=1 -C $TMP_GIT/gcc-linaro-aarch64-none-elf
 mkdir $TMP_GIT/gcc-linaro-arm-none-eabi
-wget -qO- https://releases.linaro.org/archive/13.11/components/toolchain/binaries/gcc-linaro-arm-none-eabi-4.8-2013.11_linux.tar.xz | tar -xJ --strip-components=1 -C $TMP_GIT/gcc-linaro-arm-none-eabi
+wget -qO- https://mirror.twds.com.tw/armbian-dl/_toolchain/gcc-linaro-arm-none-eabi-4.8-2014.04_linux.tar.xz | tar -xJ --strip-components=1 -C $TMP_GIT/gcc-linaro-arm-none-eabi
 
 
 sed -i "s,/opt/gcc-.*/bin/,," $TMP_GIT/u-boot/Makefile
