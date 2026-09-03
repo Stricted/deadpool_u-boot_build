@@ -150,7 +150,8 @@ else
     exit 22
 fi
 
-TMP2="uboot-bins-$(date +%Y%m%d-%H%M%S)"
+LABEL=${3:-}
+TMP2="uboot-bins-${LABEL:+${LABEL}-}$(date +%Y%m%d-%H%M%S)"
 mkdir $TMP2
 ln -sfn $TMP2 uboot-bins
 

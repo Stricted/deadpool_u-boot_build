@@ -36,7 +36,8 @@ bl30="bootloader/uboot-repo/bl30"
 bl31="bootloader/uboot-repo/bl31_1.3"
 fip="bootloader/uboot-repo/fip"
 dir="bootloader/uboot-repo"
-TMP="uboot-bins-$(date +%Y%m%d-%H%M%S)"
+VARIANT=${FRAGMENT:+$(basename "${FRAGMENT}" .cfg)}
+TMP="uboot-bins-${REFBOARD}-${VARIANT:-base}-$(date +%Y%m%d-%H%M%S)"
 
 TMP_GIT=$(mktemp -d)
 

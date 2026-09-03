@@ -8,10 +8,13 @@ BOARD=sm1_odroidc4_v1
 
 if [ "${FORCE_RECOVERY:-}" == "true" ]; then
     ./build.sh "$BOARD" board/amlogic/defconfigs/fragments/recovery.cfg
+    VARIANT=recovery
 elif [ "${CONSOLE_ENABLED:-}" == "true" ]; then
     ./build.sh "$BOARD" board/amlogic/defconfigs/fragments/console.cfg
+    VARIANT=console
 else
     ./build.sh "$BOARD"
+    VARIANT=base
 fi
 
-./generate-bins-new.sh fip-collect-g12a-odroidc4-odroidg12-v2015.01-20210623-153349 ../u-boot/build/u-boot.bin
+./generate-bins-new.sh fip-collect-g12a-odroidc4-odroidg12-v2015.01-20210623-153349 ../u-boot/build/u-boot.bin "${BOARD}-${VARIANT}"
