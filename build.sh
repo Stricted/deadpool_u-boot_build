@@ -3,45 +3,50 @@
 set -o errexit
 set -o pipefail
 set -o nounset
-
 set -o xtrace
 
-# The goal of this script is gather all binaries provides by AML in order to generate
-# our final u-boot image from the u-boot.bin (bl33)
-#
-# Some binaries come from the u-boot vendor kernel (bl21, acs, bl301)
-# Others from the buildroot package (aml_encrypt tool, bl2.bin, bl30)
-
 function usage() {
-    echo "Usage: $0 [openlinux branch] [refboard]"
+    echo "Usage: $0 [board] [fragment.cfg]"
 }
 
-if [[ $# -lt 2 ]]
-then
+if [[ $# -lt 1 ]]; then
     usage
     exit 22
 fi
 
-GITBRANCH=${1}
-REFBOARD=${2}
+REFBOARD=${1}
+FRAGMENT=${2:-}
 
-# path to clone the openlinux repos
-TMP_GIT=$(pwd)/out
+UBOOT_SRC="$(dirname "$0")/../u-boot"
+TOOLCHAIN_PATH=
 
-# U-Boot
-git clone --depth=2 https://github.com/Stricted/deadpool_u-boot.git -b $GITBRANCH $TMP_GIT/u-boot
+if command -v aarch64-none-elf-gcc &>/dev/null && command -v arm-none-eabi-gcc &>/dev/null; then
+    echo "Using system toolchain"
+else
+    OUT=$(pwd)/out
+    TOOLCHAIN_AARCH64=$OUT/gcc-linaro-aarch64-none-elf
+    TOOLCHAIN_ARM=$OUT/gcc-linaro-arm-none-eabi
 
-mkdir $TMP_GIT/gcc-linaro-aarch64-none-elf
-wget -qO- https://mirror.twds.com.tw/armbian-dl/_toolchain/gcc-linaro-aarch64-none-elf-4.8-2013.11_linux.tar.xz | tar -xJ --strip-components=1 -C $TMP_GIT/gcc-linaro-aarch64-none-elf
-mkdir $TMP_GIT/gcc-linaro-arm-none-eabi
-wget -qO- https://mirror.twds.com.tw/armbian-dl/_toolchain/gcc-linaro-arm-none-eabi-4.8-2014.04_linux.tar.xz | tar -xJ --strip-components=1 -C $TMP_GIT/gcc-linaro-arm-none-eabi
+    if [[ ! -d "$TOOLCHAIN_AARCH64" ]]; then
+        mkdir -p "$TOOLCHAIN_AARCH64"
+        wget -qO- https://mirror.twds.com.tw/armbian-dl/_toolchain/gcc-linaro-aarch64-none-elf-4.8-2013.11_linux.tar.xz \
+            | tar -xJ --strip-components=1 -C "$TOOLCHAIN_AARCH64"
+    fi
 
+    if [[ ! -d "$TOOLCHAIN_ARM" ]]; then
+        mkdir -p "$TOOLCHAIN_ARM"
+        wget -qO- https://mirror.twds.com.tw/armbian-dl/_toolchain/gcc-linaro-arm-none-eabi-4.8-2014.04_linux.tar.xz \
+            | tar -xJ --strip-components=1 -C "$TOOLCHAIN_ARM"
+    fi
 
-sed -i "s,/opt/gcc-.*/bin/,," $TMP_GIT/u-boot/Makefile
+    TOOLCHAIN_PATH="$TOOLCHAIN_AARCH64/bin:$TOOLCHAIN_ARM/bin:"
+fi
+
 (
-    cd $TMP_GIT/u-boot
-    make ${REFBOARD}_defconfig
-    PATH=$TMP_GIT/gcc-linaro-aarch64-none-elf/bin:$TMP_GIT/gcc-linaro-arm-none-eabi/bin:$PATH CROSS_COMPILE=aarch64-none-elf- make -j8 > /dev/null
+    cd "$UBOOT_SRC"
+    make "${REFBOARD}_defconfig"
+    if [[ -n "${FRAGMENT}" ]]; then
+        ./scripts/kconfig/merge_config.sh -O build build/.config "${FRAGMENT}"
+    fi
+    PATH="${TOOLCHAIN_PATH}${PATH}" CROSS_COMPILE=aarch64-none-elf- make -j$(nproc) > /dev/null
 )
-
-#rm -rf ${TMP_GIT}

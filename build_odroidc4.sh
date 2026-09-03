@@ -1,15 +1,17 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-if [ "${FORCE_RECOVERY}" == "true" ]
-then
-./build.sh android-tv-13.0.0_r1-recovery-only g12a_odroidc4_v1
-elif [ "${CONSOLE_ENABLED}" == "true" ]
-then
-./build.sh android-tv-13.0.0_r1-console g12a_odroidc4_v1
+set -o errexit
+set -o pipefail
+set -o nounset
+
+BOARD=sm1_odroidc4_v1
+
+if [ "${FORCE_RECOVERY:-}" == "true" ]; then
+    ./build.sh "$BOARD" board/amlogic/defconfigs/fragments/recovery.cfg
+elif [ "${CONSOLE_ENABLED:-}" == "true" ]; then
+    ./build.sh "$BOARD" board/amlogic/defconfigs/fragments/console.cfg
 else
-./build.sh android-tv-13.0.0_r1 g12a_odroidc4_v1
+    ./build.sh "$BOARD"
 fi
 
-./generate-bins-new.sh fip-collect-g12a-odroidc4-odroidg12-v2015.01-20210623-153349 out/u-boot/build/u-boot.bin
-
-rm -rf out
+./generate-bins-new.sh fip-collect-g12a-odroidc4-odroidg12-v2015.01-20210623-153349 ../u-boot/build/u-boot.bin
