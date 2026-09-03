@@ -67,6 +67,16 @@ UBOOTBIN=${2:-u-boot.bin}
 
 source ${FIPDIR}/soc-var.sh
 
+# Compile the ptrace-based time-spoof wrapper once.  aml_encrypt is statically
+# linked so LD_PRELOAD has no effect; fake_time intercepts SYS_time at the
+# kernel boundary instead, which works for static binaries.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+FAKE_TIME="${SCRIPT_DIR}/fake_time"
+rm -f "${FAKE_TIME}"
+cc -O2 -o "${FAKE_TIME}" "${SCRIPT_DIR}/fake_time.c"
+# Wrap aml_encrypt so every invocation gets the frozen clock + UTC locale
+aml_encrypt() { TZ=UTC "${FAKE_TIME}" "${SOURCE_DATE_EPOCH:-0}" "${FIPDIR}/aml_encrypt" "$@"; }
+
 TMP=$(mktemp -d)
 
 if [ "$SOCFAMILY" = "gxl" ]
@@ -75,11 +85,11 @@ then
     fix_blx ${FIPDIR}/bl30.bin ${TMP}/zero_tmp ${TMP}/bl30_zero.bin ${FIPDIR}/bl301.bin ${TMP}/bl301_zero.bin ${TMP}/bl30_new.bin bl30
     /usr/bin/env python2 ${FIPDIR}/acs_tool.pyc ${FIPDIR}/bl2.bin ${TMP}/bl2_acs.bin ${FIPDIR}/acs.bin 0
     fix_blx ${TMP}/bl2_acs.bin ${TMP}/zero_tmp ${TMP}/bl2_zero.bin ${FIPDIR}/bl21.bin ${TMP}/bl21_zero.bin ${TMP}/bl2_new.bin bl2
-    ${FIPDIR}/aml_encrypt --bl3enc --input ${TMP}/bl30_new.bin --output ${TMP}/bl30_new.bin.enc
-    ${FIPDIR}/aml_encrypt --bl3enc --input ${FIPDIR}/bl31.img --output ${TMP}/bl31.img.enc
-    ${FIPDIR}/aml_encrypt --bl3enc --input ${UBOOTBIN} --output ${TMP}/bl33.bin.enc
-    ${FIPDIR}/aml_encrypt --bl2sig --input ${TMP}/bl2_new.bin --output ${TMP}/bl2.n.bin.sig
-    ${FIPDIR}/aml_encrypt --bootmk --output ${TMP}/u-boot.bin \
+    aml_encrypt --bl3enc --input ${TMP}/bl30_new.bin --output ${TMP}/bl30_new.bin.enc
+    aml_encrypt --bl3enc --input ${FIPDIR}/bl31.img --output ${TMP}/bl31.img.enc
+    aml_encrypt --bl3enc --input ${UBOOTBIN} --output ${TMP}/bl33.bin.enc
+    aml_encrypt --bl2sig --input ${TMP}/bl2_new.bin --output ${TMP}/bl2.n.bin.sig
+    aml_encrypt --bootmk --output ${TMP}/u-boot.bin \
 	     --bl2 ${TMP}/bl2.n.bin.sig \
 	     --bl30 ${TMP}/bl30_new.bin.enc \
 	     --bl31 ${TMP}/bl31.img.enc \
@@ -90,11 +100,11 @@ then
     fix_blx ${FIPDIR}/bl30.bin ${TMP}/zero_tmp ${TMP}/bl30_zero.bin ${FIPDIR}/bl301.bin ${TMP}/bl301_zero.bin ${TMP}/bl30_new.bin bl30
     /usr/bin/env python2 ${FIPDIR}/acs_tool.pyc ${FIPDIR}/bl2.bin ${TMP}/bl2_acs.bin ${FIPDIR}/acs.bin 0
     fix_blx ${TMP}/bl2_acs.bin ${TMP}/zero_tmp ${TMP}/bl2_zero.bin ${FIPDIR}/bl21.bin ${TMP}/bl21_zero.bin ${TMP}/bl2_new.bin bl2
-    ${FIPDIR}/aml_encrypt --bl3sig --input ${TMP}/bl30_new.bin --output ${TMP}/bl30_new.bin.enc --level v3 --type bl30
-    ${FIPDIR}/aml_encrypt --bl3sig --input ${FIPDIR}/bl31.img --output ${TMP}/bl31.img.enc --level v3 --type bl31
-    ${FIPDIR}/aml_encrypt --bl3sig --input  ${UBOOTBIN} --output ${TMP}/bl33.bin.enc --level v3 --type bl33 --compress lz4
-    ${FIPDIR}/aml_encrypt --bl2sig --input ${TMP}/bl2_new.bin --output ${TMP}/bl2.n.bin.sig
-    ${FIPDIR}/aml_encrypt --bootmk --output ${TMP}/u-boot.bin \
+    aml_encrypt --bl3sig --input ${TMP}/bl30_new.bin --output ${TMP}/bl30_new.bin.enc --level v3 --type bl30
+    aml_encrypt --bl3sig --input ${FIPDIR}/bl31.img --output ${TMP}/bl31.img.enc --level v3 --type bl31
+    aml_encrypt --bl3sig --input  ${UBOOTBIN} --output ${TMP}/bl33.bin.enc --level v3 --type bl33 --compress lz4
+    aml_encrypt --bl2sig --input ${TMP}/bl2_new.bin --output ${TMP}/bl2.n.bin.sig
+    aml_encrypt --bootmk --output ${TMP}/u-boot.bin \
 	     --bl2 ${TMP}/bl2.n.bin.sig \
 	     --bl30 ${TMP}/bl30_new.bin.enc \
 	     --bl31 ${TMP}/bl31.img.enc \
@@ -107,14 +117,14 @@ then
     [ -e ${FIPDIR}/parse ] && ${FIPDIR}/parse ${TMP}/acs.bin
     fix_blx ${FIPDIR}/bl30.bin ${TMP}/zero_tmp ${TMP}/bl30_zero.bin ${FIPDIR}/bl301.bin ${TMP}/bl301_zero.bin ${TMP}/bl30_new.bin bl30
     fix_blx ${FIPDIR}/bl2.bin ${TMP}/zero_tmp ${TMP}/bl2_zero.bin ${TMP}/acs.bin ${TMP}/bl21_zero.bin ${TMP}/bl2_new.bin bl2
-    ${FIPDIR}/aml_encrypt --bl30sig --input ${TMP}/bl30_new.bin --output ${TMP}/bl30_new.bin.g12.enc --level v3
-    ${FIPDIR}/aml_encrypt --bl3sig  --input ${TMP}/bl30_new.bin.g12.enc --output ${TMP}/bl30_new.bin.enc --level v3 --type bl30
-    ${FIPDIR}/aml_encrypt --bl3sig  --input ${FIPDIR}/bl31.img --output ${TMP}/bl31.img.enc --level v3 --type bl31
-    ${FIPDIR}/aml_encrypt --bl3sig  --input ${UBOOTBIN} --compress lz4 --output ${TMP}/bl33.bin.enc --level v3 --type bl33
-    ${FIPDIR}/aml_encrypt --bl2sig  --input ${TMP}/bl2_new.bin --output ${TMP}/bl2.n.bin.sig
+    aml_encrypt --bl30sig --input ${TMP}/bl30_new.bin --output ${TMP}/bl30_new.bin.g12.enc --level v3
+    aml_encrypt --bl3sig  --input ${TMP}/bl30_new.bin.g12.enc --output ${TMP}/bl30_new.bin.enc --level v3 --type bl30
+    aml_encrypt --bl3sig  --input ${FIPDIR}/bl31.img --output ${TMP}/bl31.img.enc --level v3 --type bl31
+    aml_encrypt --bl3sig  --input ${UBOOTBIN} --compress lz4 --output ${TMP}/bl33.bin.enc --level v3 --type bl33
+    aml_encrypt --bl2sig  --input ${TMP}/bl2_new.bin --output ${TMP}/bl2.n.bin.sig
     if [ -e ${FIPDIR}/lpddr3_1d.fw ]
     then
-	    ${FIPDIR}/aml_encrypt --bootmk  --output ${TMP}/u-boot.bin \
+	    aml_encrypt --bootmk  --output ${TMP}/u-boot.bin \
 		     --bl2 ${TMP}/bl2.n.bin.sig \
 		     --bl30 ${TMP}/bl30_new.bin.enc \
 		     --bl31 ${TMP}/bl31.img.enc \
@@ -130,7 +140,7 @@ then
 		     --ddrfw9 ${FIPDIR}/lpddr3_1d.fw \
 		     --level v3
     else
-	    ${FIPDIR}/aml_encrypt --bootmk  --output ${TMP}/u-boot.bin \
+	    aml_encrypt --bootmk  --output ${TMP}/u-boot.bin \
 		     --bl2 ${TMP}/bl2.n.bin.sig \
 		     --bl30 ${TMP}/bl30_new.bin.enc \
 		     --bl31 ${TMP}/bl31.img.enc \

@@ -43,6 +43,15 @@ TMP_GIT=$(mktemp -d)
 
 TOOLCHAIN_PATH=
 
+# Build the ptrace-based time-spoof wrapper early so we can install it as an
+# aml_encrypt shim after the FIP blobs are downloaded.  aml_encrypt is
+# statically linked, so LD_PRELOAD has no effect; fake_time intercepts
+# SYS_time at the kernel level instead.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+FAKE_TIME="${SCRIPT_DIR}/fake_time"
+rm -f "${FAKE_TIME}"
+cc -O2 -o "${FAKE_TIME}" "${SCRIPT_DIR}/fake_time.c"
+
 if command -v aarch64-none-elf-gcc &>/dev/null && command -v arm-none-eabi-gcc &>/dev/null; then
     echo "Using system toolchain"
 else
@@ -107,6 +116,22 @@ chmod a+rwx,o-w "$TMP_GIT/mk"
 
 cp -r "$TMP_GIT/FIP/$dir"/* "$TMP_GIT/" && sync
 
+# Replace each aml_encrypt binary with a fake_time wrapper so that the
+# timestamp embedded by mk_script uses SOURCE_DATE_EPOCH rather than the
+# wall clock.  The wrapper references $SOURCE_DATE_EPOCH from the
+# environment (exported below) at runtime.
+# The BPI FIP names the binary aml_encrypt_${SOC} (e.g. aml_encrypt_g12a),
+# not plain aml_encrypt, so glob for all aml_encrypt* variants.
+for _socdir in "$TMP_GIT/fip/g12a" "$TMP_GIT/fip/g12b"; do
+    for _real in "${_socdir}"/aml_encrypt*; do
+        [[ -x "$_real" ]] || continue
+        mv "$_real" "${_real}.real"
+        printf '#!/bin/bash\nexec "%s" "$SOURCE_DATE_EPOCH" "%s" "$@"\n' \
+            "$FAKE_TIME" "${_real}.real" > "$_real"
+        chmod +x "$_real"
+    done
+done
+
 if ! [[ "$SOCFAMILY" == "g12b" ]]; then
     cp -r "$TMP_GIT/BL30/$dir"/* "$TMP_GIT/" && sync
     sed -i "s/40960/47104/" "$TMP_GIT/fip/$SOCFAMILY/build.sh"
@@ -139,6 +164,7 @@ sed -i 's/make .*_defconfig.*/true/' "$TMP_GIT/fip/build_bl33.sh"
 
 SOURCE_DATE_EPOCH=$(git -C "$UBOOT_SRC" log -1 --pretty=%ct HEAD)
 export SOURCE_DATE_EPOCH
+export TZ=UTC   # aml_encrypt's localtime() must interpret the frozen epoch as UTC
 
 (
     cd "$TMP_GIT"

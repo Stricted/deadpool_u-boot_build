@@ -4,6 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
+export SOURCE_DATE_EPOCH=$(git -C "../u-boot" log -1 --pretty=%ct HEAD)
+
 BOARD=g12a_radxa0_v1
 FIP_DIR=fip-radxa0-20210802
 UBOOT_BIN="${SCRIPT_DIR}/uboot-bins/u-boot.bin"

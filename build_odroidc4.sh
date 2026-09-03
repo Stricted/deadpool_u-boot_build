@@ -4,6 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
+export SOURCE_DATE_EPOCH=$(git -C "../u-boot" log -1 --pretty=%ct HEAD)
+
 BOARD=sm1_odroidc4_v1
 FIP_DIR=fip-collect-g12a-odroidc4-odroidg12-v2015.01-20210623-153349
 UBOOT_BIN="${SCRIPT_DIR}/uboot-bins/u-boot.bin"
