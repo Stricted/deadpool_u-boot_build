@@ -47,6 +47,7 @@ export SOURCE_DATE_EPOCH
 
 (
     cd "$UBOOT_SRC"
+    rm -rf build/
     make "${REFBOARD}_defconfig"
     if [[ -n "${FRAGMENT}" ]]; then
         ./scripts/kconfig/merge_config.sh -O build build/.config "${FRAGMENT}"

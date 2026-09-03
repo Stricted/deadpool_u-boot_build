@@ -127,6 +127,7 @@ sed -i "s/ \x24\x7BBL33_DEFCFG2\x7D\x2F\*//" "$TMP_GIT/fip/build_bl33.sh"
 # Pre-configure u-boot so mk uses our .config rather than running defconfig itself
 (
     cd "$TMP_GIT/bl33"
+    rm -rf build/
     PATH="${TOOLCHAIN_PATH}${PATH}" CROSS_COMPILE=aarch64-none-elf- make "${REFBOARD}_defconfig"
     if [[ -n "${FRAGMENT}" ]]; then
         ./scripts/kconfig/merge_config.sh -O build build/.config "${FRAGMENT}"
