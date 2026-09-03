@@ -135,6 +135,9 @@ sed -i "s/ \x24\x7BBL33_DEFCFG2\x7D\x2F\*//" "$TMP_GIT/fip/build_bl33.sh"
 # Replace the defconfig step in build_bl33.sh with a no-op
 sed -i 's/make .*_defconfig.*/true/' "$TMP_GIT/fip/build_bl33.sh"
 
+SOURCE_DATE_EPOCH=$(git -C "$UBOOT_SRC" log -1 --pretty=%ct HEAD)
+export SOURCE_DATE_EPOCH
+
 (
     cd "$TMP_GIT"
     PATH="${TOOLCHAIN_PATH}${PATH}" CROSS_COMPILE=aarch64-none-elf- ./mk "${REFBOARD}" > /dev/null

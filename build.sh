@@ -42,6 +42,9 @@ else
     TOOLCHAIN_PATH="$TOOLCHAIN_AARCH64/bin:$TOOLCHAIN_ARM/bin:"
 fi
 
+SOURCE_DATE_EPOCH=$(git -C "$UBOOT_SRC" log -1 --pretty=%ct HEAD)
+export SOURCE_DATE_EPOCH
+
 (
     cd "$UBOOT_SRC"
     make "${REFBOARD}_defconfig"
