@@ -9,6 +9,6 @@ then
 else
 ./build.sh android-tv-13.0.0_r1 sm1_radxa02_v1
 fi
-./generate-bins-new.sh fip-radxa02-220427 out/u-boot/build/u-boot.bin
+./generate-bins-new.sh fip-radxa0-20210802 out/u-boot/build/u-boot.bin
 
 rm -rf out
