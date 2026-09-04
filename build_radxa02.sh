@@ -7,7 +7,7 @@ cd "$SCRIPT_DIR"
 export SOURCE_DATE_EPOCH=$(git -C "../u-boot" log -1 --pretty=%ct HEAD)
 
 BOARD=sm1_radxa02_v1
-FIP_DIR=fip-radxa02-220427
+FIP_DIR=fip-radxa0-20210802
 UBOOT_BIN="${SCRIPT_DIR}/uboot-bins/u-boot.bin"
 LINEAGE_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 VENDOR_PATH="${LINEAGE_ROOT}/vendor/radxa/radxa02"
